@@ -18,6 +18,9 @@
 
 #include "Utils.h"
 
+// PreprocessMesh.cpp processes each *.obj file separately and in parallel.
+
+// extern claims an external function.
 extern pangolin::GlSlProgram GetShaderProgram();
 
 void SampleFromSurface(
@@ -30,6 +33,9 @@ void SampleFromSurface(
 
   std::vector<Eigen::Vector3i> linearized_faces;
 
+  // According to the source code of Pangolin, ibo should refer to the int vertex_indices of geometric elements.
+  // For triangles, the length of ibo is 3, while for lines, the length is 2.
+  // It is probably fine to remain the vertices as 3D vectors.
   for (const auto& object : geom.objects) {
     auto it_vert_indices = object.second.attributes.find("vertex_indices");
     if (it_vert_indices != object.second.attributes.end()) {
@@ -42,9 +48,15 @@ void SampleFromSurface(
     }
   }
 
+  // Vertices are here processed as images with float-value pixels.
   pangolin::Image<float> vertices =
       pangolin::get<pangolin::Image<float>>(geom.buffers["geometry"].attributes["vertex"]);
 
+  // As inferred, a face, as an instance in linearized_faces, saves the indices of its vertices, which are named as face(i).
+  // These indices are processed by the function RowPtr to query the corresponding vertices as 3D vectors.
+  // These vertices are processed by the function TriangleArea to get the area.
+  // In our 2D case, we should calculate the total perimeter.
+  // TriangleArea is included in Utils.h.
   for (const Eigen::Vector3i& face : linearized_faces) {
     float area = TriangleArea(
         (Eigen::Vector3f)Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(0))),
@@ -57,6 +69,7 @@ void SampleFromSurface(
 
     total_area += area;
 
+    // cdf_by_area might refer to the accumulated density function of area.
     if (cdf_by_area.empty()) {
       cdf_by_area.push_back(area);
 
@@ -66,17 +79,22 @@ void SampleFromSurface(
   }
 
   std::random_device seeder;
+  // mt19937 creates a pseudo random number generator.
   std::mt19937 generator(seeder());
   std::uniform_real_distribution<float> rand_dist(0.0, total_area);
 
+  // This operation sample points on triangles weighted by area.
   while ((int)surfpts.size() < num_sample) {
     float tri_sample = rand_dist(generator);
     std::vector<float>::iterator tri_index_iter =
         lower_bound(cdf_by_area.begin(), cdf_by_area.end(), tri_sample);
+      
+    // The substraction of two iterators is a signed integer, which is required in next line.
     int tri_index = tri_index_iter - cdf_by_area.begin();
 
     const Eigen::Vector3i& face = linearized_faces[tri_index];
 
+    // SamplePointFromTriangle is included in Utils.h.
     surfpts.push_back(SamplePointFromTriangle(
         Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(0))),
         Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(1))),
@@ -84,6 +102,7 @@ void SampleFromSurface(
   }
 }
 
+// SampleSDFnearSurface refers to the variations of surface points. This can be inferred since a kdTree is input.
 void SampleSDFNearSurface(
     KdVertexListTree& kdTree,
     std::vector<Eigen::Vector3f>& vertices,
@@ -106,12 +125,16 @@ void SampleSDFNearSurface(
 
   std::random_device rd;
   std::mt19937 rng(rd());
+  // This line is of no use, while vertices should be the second group of sampled surface points.
   std::uniform_int_distribution<int> vert_ind(0, vertices.size() - 1);
   std::normal_distribution<float> perterb_norm(0, stdv);
   std::normal_distribution<float> perterb_second(0, sqrt(second_variance));
 
+  // xyz_surf refers to the sampled points on surfaces.
   for (unsigned int i = 0; i < xyz_surf.size(); i++) {
     Eigen::Vector3f surface_p = xyz_surf[i];
+      
+    // samp1 and samp2 should be two variations (positive or negative about the surface) of xyz_surf[i].
     Eigen::Vector3f samp1 = surface_p;
     Eigen::Vector3f samp2 = surface_p;
 
@@ -124,6 +147,9 @@ void SampleSDFNearSurface(
     xyz.push_back(samp2);
   }
 
+  // bounding_cube_dim is set to 2, which rand_dist has a range of (0,1).
+  // num_rand_samples refers to samples that randomly distribute in the domain. To be noted, points that exactly on the surface, in other words points whose sdf values equal to 0, are not included in the training set.
+  // This indicates that the geometry is normalised to a unit sphere in the main function.
   for (int s = 0; s < (int)(num_rand_samples); s++) {
     xyz.push_back(Eigen::Vector3f(
         rand_dist(generator) * bounding_cube_dim - bounding_cube_dim / 2,
@@ -132,10 +158,14 @@ void SampleSDFNearSurface(
   }
 
   // now compute sdf for each xyz sample
+  // num_votes is set to 11. According to my experience, num_votes should refer to a hyperparameter in kdTree.
+  // kdTree is included in nanoflann. In this case, it is a 3dTree, while we need a 2dTree.
   for (int s = 0; s < (int)xyz.size(); s++) {
     Eigen::Vector3f samp_vert = xyz[s];
     std::vector<int> cl_indices(num_votes);
     std::vector<float> cl_distances(num_votes);
+      
+    // cl_indices and cl_distances are set to be empty while filled during knnSearch.
     kdTree.knnSearch(samp_vert.data(), num_votes, cl_indices.data(), cl_distances.data());
 
     int num_pos = 0;
@@ -160,7 +190,7 @@ void SampleSDFNearSurface(
         num_pos++;
     }
 
-    // all or nothing , else ignore the point
+    // all or nothing , else ignore the point. In our case, we don't care about this determine statement cuz our shapes are all watertight
     if ((num_pos == 0) || (num_pos == num_votes)) {
       xyz_used.push_back(samp_vert);
       if (num_pos <= (num_votes / 2)) {
@@ -294,6 +324,7 @@ int main(int argc, char** argv) {
   float rejection_criteria_tri = 0.03f;
   float num_samp_near_surf_ratio = 47.0f / 50.0f;
 
+  // Similar to the Arg_Parser module in Python
   CLI::App app{"PreprocessMesh"};
   app.add_option("-m", meshFileName, "Mesh File Name for Reading")->required();
   app.add_flag("-v", vis, "enable visualization");
@@ -325,12 +356,15 @@ int main(int argc, char** argv) {
   glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
   glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
 
+  // According to preprocess.py and the source code of pangolin::Geometry.cpp, LoadGeometry will load *.obj files.
+  // Therefore, we probably can load and process line elements.
   pangolin::Geometry geom = pangolin::LoadGeometry(meshFileName);
 
   std::cout << geom.objects.size() << " objects" << std::endl;
 
   // linearize the object indices
   {
+      
     int total_num_faces = 0;
 
     for (const auto& object : geom.objects) {
@@ -344,6 +378,9 @@ int main(int argc, char** argv) {
     }
 
     //      const int total_num_indices = total_num_faces * 3;
+    // ManagedImage refers to images that manage their own memory, storing a strong pointer to the memory.
+      
+    // Seemingly this part is just to improve the efficiency of memory usage. new_ibo, currently being an empty Image, is created to save vertex_indices.
     pangolin::ManagedImage<uint8_t> new_buffer(3 * sizeof(uint32_t), total_num_faces);
 
     pangolin::Image<uint32_t> new_ibo =
@@ -364,6 +401,8 @@ int main(int argc, char** argv) {
       }
     }
 
+    // According to the source code of .SubImage, the operation of SubImage(0,0,3,total_num_faces) takes the indices of three vertices of all triangles.
+    // In our blank optimisation case, it should be SubImage(0,0,2,total_num_lines) since we use line elements.
     geom.objects.clear();
     auto faces = geom.objects.emplace(std::string("mesh"), pangolin::Geometry::Element());
 
@@ -371,11 +410,12 @@ int main(int argc, char** argv) {
 
     faces->second.CopyFrom(new_buffer);
 
+    // Faces are linearized and the vertex_indices saved in new_ibo are converted to the attributes of faces.
     new_ibo = faces->second.UnsafeReinterpret<uint32_t>().SubImage(0, 0, 3, total_num_faces);
     faces->second.attributes["vertex_indices"] = new_ibo;
   }
 
-  // remove textures
+  // remove textures (just the next line)
   geom.textures.clear();
 
   pangolin::Image<uint32_t> modelFaces = pangolin::get<pangolin::Image<uint32_t>>(
@@ -383,6 +423,10 @@ int main(int argc, char** argv) {
 
   float max_dist = BoundingCubeNormalization(geom, true);
 
+  // To be noted, the training set contains the points sampled near the surfaces and points arbitrarily sampled in the box domain, but not the points sampled from multiple views on a sphere. These excluded points are, instead, sampled only to screen out non-watertight objects.
+  // In the original paper, sdf values are calculated based on these excluded points, which are saved in a KdTree and passed into SampleSDFnearSurface, and their normals. However, this method is not suitable for some watertight, non-convex objects of which some surfaces are invisiable from outside. This is because that all the excluded points are sampled from images that are rendered from z buffer.
+  // Therefore, codes below this dashed line can be annotated. A more robust and convenient algorithm will be programmed to calculate sdf values. This algorithm can be a built-in module in SampleSDFnearSurface.
+  // -----------------------------------------------------------------------------------------------------------------------
   if (vis)
     pangolin::CreateWindowAndBind("Main", 640, 480);
   else
@@ -399,6 +443,10 @@ int main(int argc, char** argv) {
   glShadeModel(GL_FLAT);
 
   // Define Projection and initial ModelView matrix
+  // According to the source code of opengl_render_state.h, OpenGlRenderState refers to a class in which cameras (s_cam) are defined.
+  // The definition and utilisation of orthographic projection matrices can be reviewed in my notes.
+  // Two s_cam along both directions of y_axis. Initial ModelView is defined by ModelViewLookAt.
+  // ModelViewLookAt: Camera at [ex,ey,ez] looking at [lx,ly,lz]. The camera coordinate system is defined by an up vector AxisY.
   pangolin::OpenGlRenderState s_cam(
       //                pangolin::ProjectionMatrix(640,480,420,420,320,240,0.05,100),
       pangolin::ProjectionMatrixOrthographic(-max_dist, max_dist, -max_dist, max_dist, 0, 2.5),
@@ -448,11 +496,13 @@ int main(int argc, char** argv) {
   pangolin::GlFramebuffer framebuffer(vertices, normals, zbuffer);
 
   // View points around a sphere.
+  // EquiDistPointsOnSphere is imported from Utils.h, with two arguements including num_sample and radius.
   std::vector<Eigen::Vector3f> views = EquiDistPointsOnSphere(100, max_dist * 1.1);
 
   std::vector<Eigen::Vector4f> point_normals;
   std::vector<Eigen::Vector4f> point_verts;
 
+  // In the blank shape optimisation case, no worry about the normal test and wrong objects.
   size_t num_tri = modelFaces.h;
   std::vector<Eigen::Vector4f> tri_id_normal_test(num_tri);
   for (size_t j = 0; j < num_tri; j++)
@@ -464,7 +514,7 @@ int main(int argc, char** argv) {
     // change camera location
     s_cam2.SetModelViewMatrix(
         pangolin::ModelViewLookAt(views[v][0], views[v][1], views[v][2], 0, 0, 0, pangolin::AxisY));
-    // Draw the scene to the framebuffer
+    // Draw the scene to the framebuffer. This part below can be ignored if vis==0.
     framebuffer.Bind();
     glViewport(0, 0, w, h);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -479,6 +529,7 @@ int main(int argc, char** argv) {
     prog.Unbind();
 
     framebuffer.Unbind();
+    // This part above can be ignored if vis==0.
 
     pangolin::TypedImage img_normals;
     normals.Download(img_normals);
@@ -490,6 +541,8 @@ int main(int argc, char** argv) {
     vertices.Download(img_verts);
     std::vector<Eigen::Vector4f> im_verts =
         ValidPointsFromIm(img_verts.UnsafeReinterpret<Eigen::Vector4f>());
+      
+    // Insert all points between im_verts.begin() and im_verts.end() after the vector of point_verts.
     point_verts.insert(point_verts.end(), im_verts.begin(), im_verts.end());
   }
 
@@ -520,6 +573,10 @@ int main(int argc, char** argv) {
     normals2.push_back(point_normals[v].head<3>());
   }
 
+  // Codes above this dashed line can be annotated.
+  // -----------------------------------------------------------------------------------------------------------------------
+  // Both KdVertexList and KdVertexListTree are inclued in Utils.h.
+  // KdTree will still be used but to save another group of surface points, which are sampled to calculate sdf values.
   KdVertexList kdVerts(vertices2);
   KdVertexListTree kdTree_surf(3, kdVerts);
   kdTree_surf.buildIndex();
@@ -529,8 +586,12 @@ int main(int argc, char** argv) {
   std::vector<float> sdf;
   int num_samp_near_surf = (int)(47 * num_sample / 50);
   std::cout << "num_samp_near_surf: " << num_samp_near_surf << std::endl;
+  
+  // xyz_surf refers to surfpts in the function of SampleFromSurface. This should be passed by address.
+  // Another group of surface points should be sampled to calculate sdf values.
   SampleFromSurface(geom, xyz_surf, num_samp_near_surf / 2);
 
+  // xyz, on the contrary, is created as an empty vector, which will be filled in the SampleSDFNearSurface function below.
   auto start = std::chrono::high_resolution_clock::now();
   SampleSDFNearSurface(
       kdTree_surf,

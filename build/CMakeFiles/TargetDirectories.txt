@@ -1,0 +1,17 @@
+/home/timo/Jupyter/DeepSDF/build/CMakeFiles/install/strip.dir
+/home/timo/Jupyter/DeepSDF/build/CMakeFiles/install/local.dir
+/home/timo/Jupyter/DeepSDF/build/CMakeFiles/SampleVisibleMeshSurface.dir
+/home/timo/Jupyter/DeepSDF/build/CMakeFiles/PreprocessMesh.dir
+/home/timo/Jupyter/DeepSDF/build/CMakeFiles/install.dir
+/home/timo/Jupyter/DeepSDF/build/CMakeFiles/edit_cache.dir
+/home/timo/Jupyter/DeepSDF/build/CMakeFiles/rebuild_cache.dir
+/home/timo/Jupyter/DeepSDF/build/CMakeFiles/list_install_components.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/install/strip.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/install/local.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/install.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/cnpy-static.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/cnpy.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/list_install_components.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/example1.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/edit_cache.dir
+/home/timo/Jupyter/DeepSDF/build/third-party/cnpy/CMakeFiles/rebuild_cache.dir

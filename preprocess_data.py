@@ -52,7 +52,7 @@ def process_mesh(mesh_filepath, target_filepath, executable, additional_args):
     subproc = subprocess.Popen(command, stdout=subprocess.DEVNULL)
     subproc.wait()
 
-
+# This function is to establish the mapping relationsihp from the source_dir to the data_dir.
 def append_data_source_map(data_dir, name, source):
 
     data_source_map_filename = ws.get_data_source_map_filename(data_dir)
@@ -143,6 +143,7 @@ if __name__ == "__main__":
         + "Otherwise, the script will produce SDF samples for training.",
     )
 
+    # both deep_sdf.add_common_args and deep_sdf.configure_logging are included in deepSDF->utils.py 
     deep_sdf.add_common_args(arg_parser)
 
     args = arg_parser.parse_args()
@@ -151,6 +152,7 @@ if __name__ == "__main__":
 
     additional_general_args = []
 
+    # __file__ refers to the current directionary.
     deepsdf_dir = os.path.dirname(os.path.abspath(__file__))
     if args.surface_sampling:
         executable = os.path.join(deepsdf_dir, "bin/SampleVisibleMeshSurface")
@@ -167,6 +169,7 @@ if __name__ == "__main__":
     with open(args.split_filename, "r") as f:
         split = json.load(f)
 
+    # source_name will be attached behind the dest_dir just to indicate the data source.
     if args.source_name is None:
         args.source_name = os.path.basename(os.path.normpath(args.source_dir))
 
@@ -182,6 +185,7 @@ if __name__ == "__main__":
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
 
+    # During data preparation, a normalised sampling step is required.
     if args.surface_sampling:
         normalization_param_dir = os.path.join(
             args.data_dir, ws.normalization_param_subdir, args.source_name
@@ -191,6 +195,7 @@ if __name__ == "__main__":
 
     append_data_source_map(args.data_dir, args.source_name, args.source_dir)
 
+    # split is a user-defined dictionary.
     class_directories = split[args.source_name]
 
     meshes_targets_and_specific_args = []
@@ -213,11 +218,14 @@ if __name__ == "__main__":
             shape_dir = os.path.join(class_path, instance_dir)
 
             processed_filepath = os.path.join(target_dir, instance_dir + extension)
+            
+            # if --skip is set and the file does exist, skip this file
             if args.skip and os.path.isfile(processed_filepath):
                 logging.debug("skipping " + processed_filepath)
                 continue
 
             try:
+                # According to ./deepsdf/data.py, this function only loads *.obj files. *.mtl files are probably only required for visualisation, which is not necessary.
                 mesh_filename = deep_sdf.data.find_mesh_in_directory(shape_dir)
 
                 specific_args = []
@@ -248,6 +256,7 @@ if __name__ == "__main__":
             except deep_sdf.data.MultipleMeshFileError:
                 logging.warning("Multiple meshes found for instance " + instance_dir)
 
+    # Submit tasks in parallel
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=int(args.num_threads)
     ) as executor:
@@ -257,6 +266,8 @@ if __name__ == "__main__":
             target_filepath,
             specific_args,
         ) in meshes_targets_and_specific_args:
+            
+            # executor.submit inputs the function and corresponding parameters.
             executor.submit(
                 process_mesh,
                 mesh_filepath,
@@ -265,4 +276,4 @@ if __name__ == "__main__":
                 specific_args + additional_general_args,
             )
 
-        executor.shutdown()
+        executor.shutdown() # wait=True by default
