@@ -357,7 +357,7 @@ int main(int argc, char** argv) {
   glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
 
   // According to preprocess.py and the source code of pangolin::Geometry.cpp, LoadGeometry will load *.obj files.
-  // Therefore, we probably can load and process line elements.
+  // According to Pangolin/geometry_obj.cpp, LoadGeometry in default loads face elements. Not sure whether we could easily process line elements. But we do have some tricks to take advantage of these developed codes.
   pangolin::Geometry geom = pangolin::LoadGeometry(meshFileName);
 
   std::cout << geom.objects.size() << " objects" << std::endl;

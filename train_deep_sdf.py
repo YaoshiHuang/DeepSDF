@@ -448,7 +448,8 @@ def main_function(experiment_directory, continue_from, batch_split):
             lat_vecs.embedding_dim,
         )
     )
-
+    
+    # According to the description in the original paper and the codes shown below, both the lat_vecs and NN are updated in training. Based on a trained NN, the lat_vecs of test samples will be estimated in the inference process.
     for epoch in range(start_epoch, num_epochs + 1):
 
         start = time.time()
