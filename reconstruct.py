@@ -276,6 +276,7 @@ if __name__ == "__main__":
             if not save_latvec_only:
                 start = time.time()
                 with torch.no_grad():
+                    # Reconstructed meshes are created in this module using the Marching Cube algorithm (skimage.measure.marching_cubes_lewiner). In the blank shape optimisation case, the Marching Cube algorithm will be replaced by its 2D special case —— the Marching Square algorithm (skimage.measure.find_contours)
                     deep_sdf.mesh.create_mesh(
                         decoder, latent, mesh_filename, N=256, max_batch=int(2 ** 18)
                     )

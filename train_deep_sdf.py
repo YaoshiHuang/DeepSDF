@@ -449,7 +449,7 @@ def main_function(experiment_directory, continue_from, batch_split):
         )
     )
     
-    # According to the description in the original paper and the codes shown below, both the lat_vecs and NN are updated in training. Based on a trained NN, the lat_vecs of test samples will be estimated in the inference process.
+    # According to the description in the original paper and the codes shown below, both the lat_vecs and NN are updated in training. Based on a trained NN, the lat_vecs of test samples will be estimated in the inference process （reconstruct.py).
     for epoch in range(start_epoch, num_epochs + 1):
 
         start = time.time()

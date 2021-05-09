@@ -47,6 +47,7 @@ def create_mesh(
     while head < num_samples:
         sample_subset = samples[head : min(head + max_batch, num_samples), 0:3].cuda()
 
+        # To be noted, the stop indice of a slice can be larger than the length of the overall list.
         samples[head : min(head + max_batch, num_samples), 3] = (
             deep_sdf.utils.decode_sdf(decoder, latent_vec, sample_subset)
             .squeeze(1)
@@ -93,6 +94,8 @@ def convert_sdf_samples_to_ply(
 
     numpy_3d_sdf_tensor = pytorch_3d_sdf_tensor.numpy()
 
+    # This will be replaced by the Marching Square algorithm (skimage.measure.find_contour) in the blank shape optimisation case.
+    # To clarify, contours extracted here are not required by image-based surrogate models, while can be used for the reconstruction of CAD models.
     verts, faces, normals, values = skimage.measure.marching_cubes_lewiner(
         numpy_3d_sdf_tensor, level=0.0, spacing=[voxel_size] * 3
     )
