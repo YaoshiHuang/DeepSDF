@@ -90,6 +90,21 @@ float TriangleArea(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const Eig
   return 0.5f * ab.norm() * ac.norm() * sinTheta;
 }
 
+Eigen::Vector2f TriangleNormal(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const 
+Eigen::Vector3f& c, Eigen::Vector3f& d) {
+  const Eigen::Vector3f ab = b - a;
+  const Eigen::Vector3f ac = c - a;
+    
+  const Eigen::Vector3f temp = ab.cross(ac);
+  Eigen::Vector2f temp_2d(temp[0], temp[1]);
+      
+  if (temp.dot(d) >= 0)
+      return Eigen::Vector2f(temp_2d);
+  else {
+      return Eigen::Vector2f(-temp_2d);
+  }
+}
+
 Eigen::Vector3f SamplePointFromTriangle(
     const Eigen::Vector3f& a,
     const Eigen::Vector3f& b,

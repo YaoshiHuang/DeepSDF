@@ -53,6 +53,9 @@ std::vector<Eigen::Vector4f> ValidPointsAndTrisFromIm(
 
 float TriangleArea(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const Eigen::Vector3f& c);
 
+Eigen::Vector2f TriangleNormal(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const 
+Eigen::Vector3f& c, Eigen::Vector3f& d);
+
 Eigen::Vector3f SamplePointFromTriangle(
     const Eigen::Vector3f& a,
     const Eigen::Vector3f& b,
