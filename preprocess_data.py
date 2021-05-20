@@ -135,11 +135,11 @@ if __name__ == "__main__":
         help="If set, the script will produce SDF samplies for testing",
     )
     arg_parser.add_argument(
-        "--surface",
-        dest="surface_sampling",
+        "--blank",
+        dest="blank_sampling",
         default=False,
         action="store_true",
-        help="If set, the script will produce mesh surface samples for evaluation. "
+        help="If set, the script will produce blank shape samples for evaluation. "
         + "Otherwise, the script will produce SDF samples for training.",
     )
 
@@ -154,14 +154,14 @@ if __name__ == "__main__":
 
     # __file__ refers to the current directionary.
     deepsdf_dir = os.path.dirname(os.path.abspath(__file__))
-    if args.surface_sampling:
+    if args.blank_sampling:
         executable = os.path.join(deepsdf_dir, "bin/SampleVisibleMeshSurface")
-        subdir = ws.surface_samples_subdir
-        extension = ".ply"
+        subdir = ws.blank_samples_subdir
+        extension = ".npy"
     else:
         executable = os.path.join(deepsdf_dir, "bin/PreprocessMesh")
         subdir = ws.sdf_samples_subdir
-        extension = ".npz"
+        extension = ".npy"
 
         if args.test_sampling:
             additional_general_args += ["-t"]
@@ -184,14 +184,6 @@ if __name__ == "__main__":
 
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
-
-    # During data preparation, a normalised sampling step is required.
-    if args.surface_sampling:
-        normalization_param_dir = os.path.join(
-            args.data_dir, ws.normalization_param_subdir, args.source_name
-        )
-        if not os.path.isdir(normalization_param_dir):
-            os.makedirs(normalization_param_dir)
 
     append_data_source_map(args.data_dir, args.source_name, args.source_dir)
 
@@ -225,23 +217,10 @@ if __name__ == "__main__":
                 continue
 
             try:
-                # According to ./deepsdf/data.py, this function only loads *.obj files. *.mtl files are probably only required for visualisation, which is not necessary.
+                
                 mesh_filename = deep_sdf.data.find_mesh_in_directory(shape_dir)
 
                 specific_args = []
-
-                if args.surface_sampling:
-                    normalization_param_target_dir = os.path.join(
-                        normalization_param_dir, class_dir
-                    )
-
-                    if not os.path.isdir(normalization_param_target_dir):
-                        os.mkdir(normalization_param_target_dir)
-
-                    normalization_param_filename = os.path.join(
-                        normalization_param_target_dir, instance_dir + ".npz"
-                    )
-                    specific_args = ["-n", normalization_param_filename]
 
                 meshes_targets_and_specific_args.append(
                     (

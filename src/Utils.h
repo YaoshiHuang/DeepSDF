@@ -7,7 +7,10 @@
 #include <nanoflann/nanoflann.hpp>
 #include <pangolin/geometry/geometry.h>
 #include <pangolin/pangolin.h>
-#include <Eigen/Core>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Dense>
+
+using namespace Eigen;
 
 struct KdVertexList {
  public:
