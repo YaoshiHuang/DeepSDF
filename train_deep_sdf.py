@@ -463,14 +463,14 @@ def main_function(experiment_directory, continue_from, batch_split):
         for sdf_data, indices in sdf_loader:
 
             # Process the input data
-            sdf_data = sdf_data.reshape(-1, 4)
+            sdf_data = sdf_data.reshape(-1, 3)
 
             num_sdf_samples = sdf_data.shape[0]
 
             sdf_data.requires_grad = False
 
-            xyz = sdf_data[:, 0:3]
-            sdf_gt = sdf_data[:, 3].unsqueeze(1)
+            xyz = sdf_data[:, 0:2]
+            sdf_gt = sdf_data[:, 2].unsqueeze(1)
 
             if enforce_minmax:
                 sdf_gt = torch.clamp(sdf_gt, minT, maxT)
