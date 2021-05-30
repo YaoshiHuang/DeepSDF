@@ -55,7 +55,7 @@ def reconstruct(
         xyz = sdf_data[:, 0:2]
         sdf_gt = sdf_data[:, 2].unsqueeze(1)
 
-        sdf_gt = torch.clamp(sdf_gt, -clamp_dist, clamp_dist)
+        # sdf_gt = torch.clamp(sdf_gt, -clamp_dist, clamp_dist)
 
         adjust_learning_rate(lr, optimizer, e, decreased_by, adjust_lr_every)
 
@@ -71,7 +71,7 @@ def reconstruct(
         if e == 0:
             pred_sdf = decoder(inputs)
 
-        pred_sdf = torch.clamp(pred_sdf, -clamp_dist, clamp_dist)
+        # pred_sdf = torch.clamp(pred_sdf, -clamp_dist, clamp_dist)
 
         loss = loss_l1(pred_sdf, sdf_gt)
         if l2reg:
@@ -129,6 +129,12 @@ if __name__ == "__main__":
         dest="iterations",
         default=800,
         help="The number of iterations of latent code optimization to perform.",
+    )
+    arg_parser.add_argument(
+        "--ns",
+        dest="number_sample",
+        default=30000,
+        help="The number of sampled points of the reconstruted blank shapes.",
     )
     arg_parser.add_argument(
         "--skip",
@@ -278,7 +284,7 @@ if __name__ == "__main__":
                 with torch.no_grad():
                     # Reconstructed meshes are created in this module using the Marching Cube algorithm (skimage.measure.marching_cubes_lewiner). In the blank shape optimisation case, the Marching Cube algorithm will be replaced by its 2D special case —— the Marching Square algorithm (skimage.measure.find_contours)
                     deep_sdf.mesh.create_mesh(
-                        decoder, latent, mesh_filename, N=256, max_batch=int(2 ** 18)
+                        decoder, latent, mesh_filename, N=256, max_batch=int(2 ** 18), number_sample = number_sample
                     )
                 logging.debug("total time: {}".format(time.time() - start))
 

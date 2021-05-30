@@ -25,117 +25,74 @@ extern pangolin::GlSlProgram GetShaderProgram();
 
 void SampleFromSurface(
     std::vector<Eigen::Vector2f> blank,
+    std::vector<Eigen::Vector2f> normal,
+    std::vector<Eigen::Vector2i> line,
     std::vector<Eigen::Vector2f>& surfpts2d,
-    std::vector<Eigen::Vector2f>& normals2d;
+    std::vector<Eigen::Vector2f>& normals2d,
     int num_sample,
     bool ref = false) {
-  float total_area = 0.0f;
+  float total_len = 0.0f;
 
-  std::vector<float> cdf_by_area;
+  std::vector<float> cdf_by_len;
+  Eigen::Vector2f temp;
 
-  std::vector<Eigen::Vector3i> linearized_faces;
-  std::vector<Eigen::Vector2f> face_normal;
-  std::vector<Eigen::Vector3f> surfpts3d;
+  // LineLen is included in Utils.h.
+  for (const Eigen::Vector2i& ele : line) {
+    float len = LineLen(
+        (Eigen::Vector2f)Eigen::Map<Eigen::Vector2f>(vertices.RowPtr(ele(0))),
+        (Eigen::Vector2f)Eigen::Map<Eigen::Vector2f>(vertices.RowPtr(ele(1))));
 
-  // According to the source code of Pangolin, ibo should refer to the int vertex_indices of geometric elements.
-  // For triangles, the length of ibo is 3, while for lines, the length is 2.
-  // It is probably fine to remain the vertices as 3D vectors.
-  for (const auto& object : geom.objects) {
-    auto it_vert_indices = object.second.attributes.find("vertex_indices");
-    if (it_vert_indices != object.second.attributes.end()) {
-      pangolin::Image<uint32_t> ibo =
-          pangolin::get<pangolin::Image<uint32_t>>(it_vert_indices->second);
-
-      for (int i = 0; i < ibo.h; ++i) {
-        linearized_faces.emplace_back(ibo(0, i), ibo(1, i), ibo(2, i));
-      }
-    }
-  }
-
-  // Vertices are here processed as images with float-value pixels.
-  pangolin::Image<float> vertices =
-      pangolin::get<pangolin::Image<float>>(geom.buffers["geometry"].attributes["vertex"]);
-  if (ref == true) {
-      pangolin::Image<float> normals =
-          pangolin::get<pangolin::Image<float>>(geom.buffers["geometry"].attributes["normal"]);
-  }
-
-  // As inferred, a face, as an instance in linearized_faces, saves the indices of its vertices, which are named as face(i).
-  // These indices are processed by the function RowPtr to query the corresponding vertices as 3D vectors.
-  // These vertices are processed by the function TriangleArea to get the area.
-  // In our 2D case, we should calculate the total perimeter.
-  // TriangleArea is included in Utils.h.
-  for (const Eigen::Vector3i& face : linearized_faces) {
-    float area = TriangleArea(
-        (Eigen::Vector3f)Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(0))),
-        (Eigen::Vector3f)Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(1))),
-        (Eigen::Vector3f)Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(2))));
-
-    if (std::isnan(area)) {
-      area = 0.f;
+    if (std::isnan(len)) {
+      len = 0.f;
     }
 
-    total_area += area;
+    total_len += len;
 
-    // cdf_by_area might refer to the accumulated density function of area.
-    if (cdf_by_area.empty()) {
-      cdf_by_area.push_back(area);
+    if (cdf_by_len.empty()) {
+      cdf_by_len.push_back(len);
 
     } else {
-      cdf_by_area.push_back(cdf_by_area.back() + area);
-    }
-    
-    if (ref == true) {
-      Eigen::Vector2f norm = TriangleNormal(
-          (Eigen::Vector3f)Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(0))),
-          (Eigen::Vector3f)Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(1))),
-          (Eigen::Vector3f)Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(2))),
-          (Eigen::Vector3f)Eigen::Map<Eigen::Vector3f>(normals.RowPtr(face(0))));
-      
-      face_normal.push_back(norm);
+      cdf_by_len.push_back(cdf_by_len.back() + len);
     }
   }
 
   std::random_device seeder;
   // mt19937 creates a pseudo random number generator.
   std::mt19937 generator(seeder());
-  std::uniform_real_distribution<float> rand_dist(0.0, total_area);
+  std::uniform_real_distribution<float> rand_dist(0.0, total_len);
 
-  // This operation sample points on triangles weighted by area.
+  // This operation sample points on triangles weighted by len.
   while ((int)surfpts2d.size() < num_sample) {
-    float tri_sample = rand_dist(generator);
-    std::vector<float>::iterator tri_index_iter =
-        lower_bound(cdf_by_area.begin(), cdf_by_area.end(), tri_sample);
+    float ele_sample = rand_dist(generator);
+    std::vector<float>::iterator ele_index_iter =
+        lower_bound(cdf_by_len.begin(), cdf_by_len.end(), ele_sample);
       
     // The substraction of two iterators is a signed integer, which is required in next line.
-    int tri_index = tri_index_iter - cdf_by_area.begin();
+    int ele_index = ele_index_iter - cdf_by_len.begin();
 
-    const Eigen::Vector3i& face = linearized_faces[tri_index];
+    const Eigen::Vector2i& ele = line[ele_index];
 
-    // SamplePointFromTriangle is included in Utils.h.
-    surfpts3d = SamplePointFromTriangle(
-        Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(0))),
-        Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(1))),
-        Eigen::Map<Eigen::Vector3f>(vertices.RowPtr(face(2)))));
+    // SamplePointFromLine is included in Utils.h.
+    temp = SamplePointFromLine(
+        Eigen::Map<Eigen::Vector2f>(blank.RowPtr(ele(0))),
+        Eigen::Map<Eigen::Vector2f>(blank.RowPtr(ele(1)))
+    );
       
-    surfpts2d.push_back(Eigen::Vector2f(
-    surfpts3d[0],
-    surfpts3d[1]));
-      
-    if (ref == true) {
-      const Eigen::Vector2f& face_norm = face_normal[tri_index];
-      normals2d.push_back(face_norm);
-    }
+    surfpts2d.push_back(temp);
+    if (ref == true)
+        normals2d.push_back(normal[ele_index]);
   }
 }
 
 // SampleSDFnearSurface refers to the variations of surface points. This can be inferred since a kdTree is input.
 void SampleSDFNearSurface(
-    KdVertexListTree& kdTree,
-    std::vector<Eigen::Vector2f>& vertices,
-    std::vector<Eigen::Vector2f>& xyz_surf,
+    KdVertexListTree& kdTree_surf,
+    KdVertexListTree& kdTree_vert,
+    std::vector<Eigen::Vector2f>& pts_surf,
+    std::vector<Eigen::Vector2f>& pts_vert,
+    std::vector<Eigen::Vector2f>& xy_surf,
     std::vector<Eigen::Vector2f>& normals,
-    std::vector<Eigen::Vector2f>& xyz,
+    std::vector<Eigen::Vector2f>& xy,
     std::vector<float>& sdfs,
     int num_rand_samples,
     float variance,
@@ -147,21 +104,21 @@ void SampleSDFNearSurface(
   std::random_device seeder;
   std::mt19937 generator(seeder());
   std::uniform_real_distribution<float> rand_dist(0.0, 1.0);
-  std::vector<Eigen::Vector3f> xyz_used;
+  std::vector<Eigen::Vector3f> xy_used;
   std::vector<Eigen::Vector3f> second_samples;
 
   std::random_device rd;
   std::mt19937 rng(rd());
   // This line is of no use, while vertices should be the second group of sampled surface points.
-  std::uniform_int_distribution<int> vert_ind(0, vertices.size() - 1);
+  std::uniform_int_distribution<int> vert_ind(0, pts_surf.size() - 1);
   std::normal_distribution<float> perterb_norm(0, stdv);
   std::normal_distribution<float> perterb_second(0, sqrt(second_variance));
 
-  // xyz_surf refers to the sampled points on surfaces.
-  for (unsigned int i = 0; i < xyz_surf.size(); i++) {
-    Eigen::Vector2f surface_p = xyz_surf[i];
+  // xy_surf refers to the sampled points on surfaces.
+  for (unsigned int i = 0; i < xy_surf.size(); i++) {
+    Eigen::Vector2f surface_p = xy_surf[i];
       
-    // samp1 and samp2 should be two variations (positive or negative about the surface) of xyz_surf[i].
+    // samp1 and samp2 should be two variations (positive or negative about the surface) of xy_surf[i].
     Eigen::Vector2f samp1 = surface_p;
     Eigen::Vector2f samp2 = surface_p;
 
@@ -170,50 +127,63 @@ void SampleSDFNearSurface(
       samp2[j] += perterb_second(rng);
     }
 
-    xyz.push_back(samp1);
-    xyz.push_back(samp2);
+    xy.push_back(samp1);
+    xy.push_back(samp2);
   }
 
   // bounding_cube_dim is set to 2, which rand_dist has a range of (0,1).
   // num_rand_samples refers to samples that randomly distribute in the domain. To be noted, points that exactly on the surface, in other words points whose sdf values equal to 0, are not included in the training set.
   // This indicates that the geometry is normalised to a unit sphere in the main function.
   for (int s = 0; s < (int)(num_rand_samples); s++) {
-    xyz.push_back(Eigen::Vector2f(
+    xy.push_back(Eigen::Vector2f(
         rand_dist(generator) * bounding_cube_dim - bounding_cube_dim / 2,
         rand_dist(generator) * bounding_cube_dim - bounding_cube_dim / 2));
   }
 
-  // now compute sdf for each xyz sample
+  // now compute sdf for each xy sample
   // num_votes is set to 11. According to my experience, num_votes should refer to a hyperparameter in kdTree.
   // kdTree is included in nanoflann. In this case, it is a 3dTree, while we need a 2dTree.
-  for (int s = 0; s < (int)xyz.size(); s++) {
-    Eigen::Vector2f samp_vert = xyz[s];
-    std::vector<int> cl_indices(num_votes);
-    std::vector<float> cl_distances(num_votes);
+  for (int s = 0; s < (int)xy.size(); s++) {
+    Eigen::Vector2f samp = xy[s];
+    std::vector<int> surf_indices(num_votes);
+    std::vector<float> surf_distances(num_votes);
+    std::vector<int> vert_indices(num_votes);
+    std::vector<float> vert_distances(num_votes);
       
-    // cl_indices and cl_distances are set to be empty while filled during knnSearch.
-    kdTree.knnSearch(samp_vert.data(), num_votes, cl_indices.data(), cl_distances.data());
+    // surf_indices, vert_indices and surf_distances, vert_distances are set to be empty while filled during knnSearch.
+    kdTree_surf.knnSearch(samp.data(), num_votes, surf_indices.data(), surf_distances.data());
+    kdTree_vert.knnSearch(samp.data(), num_votes, vert_indices.data(), vert_distances.data());
 
-    int num_pos = 0;
     float sdf;
 
-    uint32_t cl_ind = cl_indices[0];
-    Eigen::Vector3f cl_vert = vertices[cl_ind];
-    Eigen::Vector3f ray_vec = samp_vert - cl_vert;
-    float ray_vec_leng = ray_vec.norm();
+    uint32_t surf_ind = surf_indices[0];
+    uint32_t vert_ind = vert_indices[0];
+    Eigen::Vector2f surf_vec = samp - pts_surf[surf_ind];
+    Eigen::Vector2f vert_vec = samp - pts_vert[vert_ind];
+    float surf_vec_leng = surf_vec.norm();
+    float vert_vec_leng = vert_vec.norm();
 
     // if close to the surface, use point plane distance
-    if (ray_vec_leng < stdv)
-      sdf = fabs(normals[cl_ind].dot(ray_vec));
-    else
-      sdf = ray_vec_leng;
-          
-    float d = normals[cl_ind].dot(ray_vec / ray_vec_leng);
+    if (surf_vec_leng > vert_vec_leng) {
+      sdf = vert_vec_leng;
+      float d = normals[surf_ind].dot(surf_vec / surf_vec_leng);
         
-    if (d < 0)
-      sdf = -sdf;
-
-    sdfs.push_back(sdf);
+      if (d < 0)
+        sdf = -sdf;
+        
+      sdfs.push_back(sdf);
+    } else {
+        if (surf_vec_leng < stdv)
+          sdf = fabs(normals[surf_ind].dot(surf_vec));
+        else
+          sdf = surf_vec_leng;
+          float d = normals[surf_ind].dot(surf_vec / surf_vec_leng);
+        
+        if (d < 0)
+          sdf = -sdf;
+        
+        sdfs.push_back(sdf);
+    } 
   }
 }
 
@@ -232,11 +202,19 @@ void loadFEMfile(
     int counter = 0;
     float x_coord;
     float y_coord;
+    Marix2f rot;
+    Eigen::Vector2f vec_diff
+    
+    rot << 0, 1,
+           -1, 0;
     
     while(getline(fem, s))
     {
         if (counter < 0)
         {
+            vec_diff = blank[0] - blank[blank.size()-1];
+            normal.push_back(rot * vec_diff / vec_diff.norm());
+            line.push_back(Eigen::Vector2i(blank.size()-1, 0));
             break;
         } else if (counter == 0) {
             if (s.length <= 8)
@@ -264,7 +242,9 @@ void loadFEMfile(
             counter++;
             
             if (counter > 1) {
-                
+                vec_diff = blank[counter-1] - blank[counter-2];
+                normal.push_back(rot * vec_diff / vec_diff.norm());
+                line.push_back(Eigen::Vector2i(counter-2, counter-1));
             }
             
             if (s[0] == "$") {
@@ -275,15 +255,15 @@ void loadFEMfile(
 }
 
 void writeSDFToNPY(
-    std::vector<Eigen::Vector2f>& xyz,
+    std::vector<Eigen::Vector2f>& xy,
     std::vector<float>& sdfs,
     std::string filename) {
-  unsigned int num_vert = xyz.size();
+  unsigned int num_vert = xy.size();
   std::vector<float> data(num_vert * 3);
   int data_i = 0;
 
   for (unsigned int i = 0; i < num_vert; i++) {
-    Eigen::Vector2f v = xyz[i];
+    Eigen::Vector2f v = xy[i];
     float s = sdfs[i];
 
     for (int j = 0; j < 2; j++)
@@ -291,7 +271,39 @@ void writeSDFToNPY(
     data[data_i++] = s;
   }
 
-  cnpy::npy_save(filename, &data[0], {(long unsigned int)num_vert, 4}, "w");
+  cnpy::npy_save(filename, &data[0], {(long unsigned int)num_vert, 3}, "w");
+}
+
+void writeSDFToNPZ(
+    std::vector<Eigen::Vector2f>& xy,
+    std::vector<float>& sdfs,
+    std::string filename,
+    bool print_num = false) {
+  unsigned int num_vert = xy.size();
+  std::vector<float> pos;
+  std::vector<float> neg;
+
+  for (unsigned int i = 0; i < num_vert; i++) {
+    Eigen::Vector2f v = xy[i];
+    float s = sdfs[i];
+
+    if (s > 0) {
+      for (int j = 0; j < 2; j++)
+        pos.push_back(v[j]);
+      pos.push_back(s);
+    } else {
+      for (int j = 0; j < 2; j++)
+        neg.push_back(v[j]);
+      neg.push_back(s);
+    }
+  }
+
+  cnpy::npz_save(filename, "pos", &pos[0], {(long unsigned int)(pos.size() / 3.0), 3}, "w");
+  cnpy::npz_save(filename, "neg", &neg[0], {(long unsigned int)(neg.size() / 3.0), 3}, "a");
+  if (print_num) {
+    std::cout << "pos num: " << pos.size() / 3.0 << std::endl;
+    std::cout << "neg num: " << neg.size() / 3.0 << std::endl;
+  }
 }
 
 int main(int argc, char** argv) {
@@ -351,30 +363,35 @@ int main(int argc, char** argv) {
   bool ref = true;
   std::vector<Eigen::Vector2f> verticesRef;
   std::vector<Eigen::Vector2f> normalsRef;
-  SampleFromSurface(blank, verticesRef, normalsRef, num_sample, ref);
+  SampleFromSurface(blank, normal, line, verticesRef, normalsRef, num_sample, ref);
 
-  KdVertexList kdVerts(verticesRef);
-  KdVertexListTree kdTree_surf(2, kdVerts);
+  KdVertexList kdVerts_surf(verticesRef);
+  KdVertexListTree kdTree_surf(2, kdVerts_surf);
   kdTree_surf.buildIndex();
+    
+  KdVertexList kdVerts_vert(blank);
+  KdVErtextListTree kdTree_vert(kdVerts_vert);
+  kdTree_vert.buildIndex();
 
-  std::vector<Eigen::Vector2f> xyz;
-  std::vector<Eigen::Vector2f> xyz_surf;
+  std::vector<Eigen::Vector2f> xy;
+  std::vector<Eigen::Vector2f> xy_surf;
   std::vector<Eigen::Vector2f> normals_surf;
   std::vector<float> sdf;
   
-  
-  // xyz_surf refers to surfpts in the function of SampleFromSurface. This should be passed by address.
+  // xy_surf refers to surfpts in the function of SampleFromSurface. This should be passed by address.
   // Another group of surface points should be sampled to calculate sdf values.
-  SampleFromSurface(blank, xyz_surf, normals_surf, num_samp_near_surf / 2);
+  SampleFromSurface(blank, normal, line, xy_surf, normals_surf, num_samp_near_surf / 2);
 
-  // xyz, on the contrary, is created as an empty vector, which will be filled in the SampleSDFNearSurface function below.
+  // xy, on the contrary, is created as an empty vector, which will be filled in the SampleSDFNearSurface function below.
   auto start = std::chrono::high_resolution_clock::now();
   SampleSDFNearSurface(
       kdTree_surf,
+      kdTree_vert,
       verticesRef,
-      xyz_surf,
+      blank,
+      xy_surf,
       normalsRef,
-      xyz,
+      xy,
       sdf,
       num_sample - num_samp_near_surf,
       variance,
@@ -386,8 +403,18 @@ int main(int argc, char** argv) {
   auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(finish - start).count();
   std::cout << elapsed << std::endl;
 
-  std::cout << "num points sampled: " << xyz.size() << std::endl;
-  writeSDFToNPY(xyz, sdf, npyFileName);
+  if (save_ply) {
+    writeSDFToPLY(xy, sdf, plyFileNameOut, false, true);
+  }
 
+  std::cout << "num points sampled: " << xy.size() << std::endl;
+  std::size_t save_npz = npyFileName.find("npz");
+  if (save_npz == std::string::npos)
+    writeSDFToNPY(xy, sdf, npyFileName);
+  else {
+    writeSDFToNPZ(xy, sdf, npyFileName, true);
+  }
+
+  std::cout << "ended correctly" << std::endl;
   return 0;
 }

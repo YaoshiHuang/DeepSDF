@@ -127,7 +127,7 @@ def get_reconstructed_mesh_filename(
         reconstruction_meshes_subdir,
         dataset,
         class_name,
-        instance_name + ".ply",
+        instance_name + "sample.npy",
     )
 
 

@@ -139,8 +139,8 @@ if __name__ == "__main__":
         dest="blank_sampling",
         default=False,
         action="store_true",
-        help="If set, the script will produce blank shape samples for evaluation. "
-        + "Otherwise, the script will produce SDF samples for training.",
+        help="If set, the script will produce blank contour samples for evaluation. "
+        + "Otherwise, the script will produce SDF for training.",
     )
 
     # both deep_sdf.add_common_args and deep_sdf.configure_logging are included in deepSDF->utils.py 
@@ -156,15 +156,15 @@ if __name__ == "__main__":
     deepsdf_dir = os.path.dirname(os.path.abspath(__file__))
     if args.blank_sampling:
         executable = os.path.join(deepsdf_dir, "bin/SampleVisibleMeshSurface")
-        subdir = ws.blank_samples_subdir
+        subdir = ws.surface_samples_subdir
         extension = ".npy"
     else:
         executable = os.path.join(deepsdf_dir, "bin/PreprocessMesh")
         subdir = ws.sdf_samples_subdir
-        extension = ".npy"
+        extension = ".npz"
 
-        if args.test_sampling:
-            additional_general_args += ["-t"]
+    if args.test_sampling:
+        additional_general_args += ["-t"]
 
     with open(args.split_filename, "r") as f:
         split = json.load(f)

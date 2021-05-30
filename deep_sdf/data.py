@@ -102,8 +102,12 @@ def unpack_sdf_samples_from_ram(data, subsample=None):
     pos_size = pos_tensor.shape[0]
     neg_size = neg_tensor.shape[0]
 
-    pos_start_ind = random.randint(0, pos_size - half)
-    sample_pos = pos_tensor[pos_start_ind : (pos_start_ind + half)]
+    if pos_size <= half:
+        random_pos = (torch.rand(half) * pos_tensor.shape[0]).long()
+        sample_pos = torch.index_select(pos_tensor, 0, random_pos)
+    else:
+        pos_start_ind = random.randint(0, pos_size - half)
+        sample_pos = pos_tensor[pos_start_ind : (pos_start_ind + half)]
 
     if neg_size <= half:
         random_neg = (torch.rand(half) * neg_tensor.shape[0]).long()

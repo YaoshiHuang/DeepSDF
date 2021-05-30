@@ -90,6 +90,12 @@ float TriangleArea(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const Eig
   return 0.5f * ab.norm() * ac.norm() * sinTheta;
 }
 
+float LineLen(const Eigen::Vector2f& a, const Eigen::Vector2f& b) {
+  const Eigen::Vector2f ab = a - b;
+  
+  return ab.norm();
+}
+
 Eigen::Vector2f TriangleNormal(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const 
 Eigen::Vector3f& c, Eigen::Vector3f& d) {
   const Eigen::Vector3f ab = b - a;
@@ -118,6 +124,18 @@ Eigen::Vector3f SamplePointFromTriangle(
 
   return Eigen::Vector3f(
       (1 - std::sqrt(r1)) * a + std::sqrt(r1) * (1 - r2) * b + r2 * std::sqrt(r1) * c);
+}
+
+Eigen::Vector2f SamplePointFromTriangle(
+    const Eigen::Vector2f& a,
+    const Eigen::Vector2f& b) {
+    std::random_device seeder;
+    std::mt19937 generator(seeder());
+    std::uniform_real_disktribution<float> rand_dist(0.0, 1.0);
+    
+    const float r = rand_dist(genenrator);
+    
+    return Eigen::Vector2f(r * a + (1-r) * b);
 }
 
 // TODO: duplicated w/ below

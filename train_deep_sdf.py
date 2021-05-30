@@ -316,6 +316,8 @@ def main_function(experiment_directory, continue_from, batch_split):
 
     num_samp_per_scene = specs["SamplesPerScene"]
     scene_per_batch = specs["ScenesPerBatch"]
+    
+    # It is optional whether to clamp the sdf values in-between [-δ, δ]. A smaller δ means that the autodecoder focuses more on samples near the surface.
     clamp_dist = specs["ClampingDistance"]
     minT = -clamp_dist
     maxT = clamp_dist
@@ -472,8 +474,8 @@ def main_function(experiment_directory, continue_from, batch_split):
             xyz = sdf_data[:, 0:2]
             sdf_gt = sdf_data[:, 2].unsqueeze(1)
 
-            if enforce_minmax:
-                sdf_gt = torch.clamp(sdf_gt, minT, maxT)
+            # if enforce_minmax:
+            #     sdf_gt = torch.clamp(sdf_gt, minT, maxT)
 
             xyz = torch.chunk(xyz, batch_split)
             indices = torch.chunk(
@@ -496,8 +498,8 @@ def main_function(experiment_directory, continue_from, batch_split):
                 # NN optimization
                 pred_sdf = decoder(input)
 
-                if enforce_minmax:
-                    pred_sdf = torch.clamp(pred_sdf, minT, maxT)
+                # if enforce_minmax:
+                #     pred_sdf = torch.clamp(pred_sdf, minT, maxT)
 
                 chunk_loss = loss_l1(pred_sdf, sdf_gt[i].cuda()) / num_sdf_samples
 

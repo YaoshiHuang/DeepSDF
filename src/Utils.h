@@ -56,6 +56,8 @@ std::vector<Eigen::Vector4f> ValidPointsAndTrisFromIm(
 
 float TriangleArea(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const Eigen::Vector3f& c);
 
+float LineLen(const Eigen::Vector2f& a, const Eigen::Vector2f& b);
+
 Eigen::Vector2f TriangleNormal(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const 
 Eigen::Vector3f& c, Eigen::Vector3f& d);
 
@@ -63,6 +65,10 @@ Eigen::Vector3f SamplePointFromTriangle(
     const Eigen::Vector3f& a,
     const Eigen::Vector3f& b,
     const Eigen::Vector3f& c);
+
+Eigen::Vector2f SamplePointFromLine(
+    const Eigen::Vector2f& a,
+    const Eigen::Vector2f& b);
 
 std::pair<Eigen::Vector3f, float> ComputeNormalizationParameters(
     pangolin::Geometry& geom,

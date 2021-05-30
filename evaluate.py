@@ -39,35 +39,35 @@ def evaluate(experiment_directory, checkpoint, data_dir, split_filename):
                     "SurfaceSamples",
                     dataset,
                     class_name,
-                    instance_name + ".ply",
+                    instance_name + ".npy",
                 )
 
                 logging.debug(
                     "ground truth samples are " + ground_truth_samples_filename
                 )
 
-                normalization_params_filename = os.path.join(
-                    data_dir,
-                    "NormalizationParameters",
-                    dataset,
-                    class_name,
-                    instance_name + ".npz",
-                )
+                # normalization_params_filename = os.path.join(
+                #     data_dir,
+                #     "NormalizationParameters",
+                #     dataset,
+                #     class_name,
+                #     instance_name + ".npz",
+                # )
 
-                logging.debug(
-                    "normalization params are " + ground_truth_samples_filename
-                )
+                # logging.debug(
+                #     "normalization params are " + ground_truth_samples_filename
+                # )
 
-                ground_truth_points = trimesh.load(ground_truth_samples_filename)
-                reconstruction = trimesh.load(reconstructed_mesh_filename)
+                ground_truth_points = np.load(ground_truth_samples_filename)
+                ground_truth_points = ground_truth_points.reshape(-1, 2)
+                reconstruction = np.load(reconstructed_mesh_filename)
+                reconstruction = reconstruction.reshape(-1, 2)
 
-                normalization_params = np.load(normalization_params_filename)
+                # normalization_params = np.load(normalization_params_filename)
 
                 chamfer_dist = deep_sdf.metrics.chamfer.compute_trimesh_chamfer(
                     ground_truth_points,
-                    reconstruction,
-                    normalization_params["offset"],
-                    normalization_params["scale"],
+                    reconstruction
                 )
 
                 logging.debug("chamfer distance: " + str(chamfer_dist))

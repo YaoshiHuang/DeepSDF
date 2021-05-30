@@ -261,8 +261,8 @@ void writeSDFToNPZ(
     }
   }
 
-  cnpy::npz_save(filename, "pos", &pos[0], {(long unsigned int)(pos.size() / 4.0), 4}, "w");
-  cnpy::npz_save(filename, "neg", &neg[0], {(long unsigned int)(neg.size() / 4.0), 4}, "a");
+  cnpy::npz_save(filename, "pos", &pos[0], {(long unsigned int)(pos.size() / 3.0), 3}, "w");
+  cnpy::npz_save(filename, "neg", &neg[0], {(long unsigned int)(neg.size() / 3.0), 3}, "a");
   if (print_num) {
     std::cout << "pos num: " << pos.size() / 4.0 << std::endl;
     std::cout << "neg num: " << neg.size() / 4.0 << std::endl;
