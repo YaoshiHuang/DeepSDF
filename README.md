@@ -160,7 +160,10 @@ Given the stochastic nature of shape reconstruction (shapes are reconstructed vi
 
 ## Examples
 
-Here's a list of commands for a typical use case of training and evaluating a DeepSDF model using the "sofa" class of the ShapeNet version 2 dataset. 
+Here's a list of commands for a typical use case of training and evaluating a DeepSDF model using the "sofa" class of the ShapeNet version 2 dataset.
+To be noted:
+1. --name is not arbitrary. Instead, it must be included in the split files in advance.
+2. The shape directory has to be an absolute file path
 
 ```
 # navigate to the DeepSdf root directory
