@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
   std::string meshFileName;
   std::string npyOutFile;
   // std::string normalizationOutputFile;
-  int num_sample = 30000;
+  int num_sample = 6000;
 
   CLI::App app{"SampleVisibleMeshSurface"};
   app.add_option("-m", meshFileName, "*fem mesh File Name for Reading")->required();

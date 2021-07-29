@@ -32,8 +32,7 @@ def filter_classes_regex(patterns, classes):
     for pattern in patterns:
         regex = re.compile(pattern)
         passed_classes = passed_classes.union(set(filter(regex.match, classes)))
-
-    return list(passed_classes)
+2    return list(passed_classes)
 
 
 def filter_classes(patterns, classes):
@@ -152,14 +151,14 @@ if __name__ == "__main__":
 
     additional_general_args = []
 
-    # __file__ refers to the current directionary.
+    # __file__ refers to the current directionary. To be noted, python doesn't detect current file path in __file__. Therefore, we always use __file__ in *.py and then run the scripts.
     deepsdf_dir = os.path.dirname(os.path.abspath(__file__))
     if args.blank_sampling:
-        executable = os.path.join(deepsdf_dir, "bin/SampleVisibleMeshSurface")
+        executable = os.path.join(deepsdf_dir, "bin/SampleVisibleMeshSurface_2D")
         subdir = ws.surface_samples_subdir
         extension = ".npy"
     else:
-        executable = os.path.join(deepsdf_dir, "bin/PreprocessMesh")
+        executable = os.path.join(deepsdf_dir, "bin/PreprocessMesh_2D")
         subdir = ws.sdf_samples_subdir
         extension = ".npz"
 

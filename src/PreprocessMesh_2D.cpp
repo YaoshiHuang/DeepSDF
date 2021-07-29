@@ -316,7 +316,7 @@ int main(int argc, char** argv) {
   std::vector<Eigen::Vector2i> line;
   float variance = 0.005;
   float max_bound = 50.;
-  int num_sample = 500000;
+  int num_sample = 5000;
   float rejection_criteria_obs = 0.02f;
   float rejection_criteria_tri = 0.03f;
   float num_samp_near_surf_ratio = 47.0f / 50.0f;
@@ -340,7 +340,7 @@ int main(int argc, char** argv) {
   if (test_flag) {
     second_variance = variance / 100;
     num_samp_near_surf_ratio = 45.0f / 50.0f;
-    num_sample = 250000;
+    num_sample = 2500;
   }
 
   // Pre: According to preprocess.py and the source code of pangolin::Geometry.cpp, LoadGeometry will load *.obj files.
